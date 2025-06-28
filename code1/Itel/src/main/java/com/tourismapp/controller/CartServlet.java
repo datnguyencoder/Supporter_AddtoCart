@@ -25,17 +25,26 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import org.json.JSONObject;
 
-@WebServlet(name = "CartServlet", urlPatterns = {"/cart", "/cart/add", "/cart/update", "/cart/remove", "/orders", "/cart/createOrder"})
+@WebServlet(name = "CartServlet", urlPatterns = {"/Itel/cart", "/Itel/cart/add", "/Itel/cart/update", "/Itel/cart/remove", "/Itel/orders", "/Itel/cart/createOrder", "/Itel/cart/count"})
 public class CartServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         String path = request.getServletPath();
-        if ("/cart".equals(path)) {
+        System.out.println(">>> [DEBUG] doGet servlet path: " + path);
+        
+        if ("/Itel/cart".equals(path)) {
             request.getRequestDispatcher(ProjectPaths.JSP_CARTPAGE_PATH).forward(request, response);
-        } else if ("/orders".equals(path)) {
+        } else if ("/Itel/orders".equals(path)) {
             request.getRequestDispatcher(ProjectPaths.JSP_ORDERPAGE_PATH).forward(request, response);
+        } else if ("/Itel/cart/count".equals(path)) {
+            try {
+                handleGetCartCount(request, response, new JSONObject());
+            } catch (SQLException e) {
+                e.printStackTrace();
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Database error");
+            }
         } else {
             response.sendError(HttpServletResponse.SC_NOT_FOUND, "Invalid endpoint");
         }
@@ -48,15 +57,16 @@ protected void doPost(HttpServletRequest request, HttpServletResponse response)
     response.setContentType("application/json");
     response.setCharacterEncoding("UTF-8");
 
+    System.out.println(">>> [DEBUG] doPost servlet path: " + path);
     JSONObject jsonResponse = new JSONObject();
 
     try {
         switch (path) {
-            case "/cart/add" -> handleAddToCart(request, response, jsonResponse);
-            case "/cart/update" -> handleUpdateCart(request, response, jsonResponse);
-            case "/cart/remove" -> handleRemoveFromCart(request, response, jsonResponse);
-            case "/cart/createOrder" -> handleCreateOrder(request, response, jsonResponse);
-            case "/cart/count" -> handleGetCartCount(request, response, jsonResponse);
+            case "/Itel/cart/add" -> handleAddToCart(request, response, jsonResponse);
+            case "/Itel/cart/update" -> handleUpdateCart(request, response, jsonResponse);
+            case "/Itel/cart/remove" -> handleRemoveFromCart(request, response, jsonResponse);
+            case "/Itel/cart/createOrder" -> handleCreateOrder(request, response, jsonResponse);
+            case "/Itel/cart/count" -> handleGetCartCount(request, response, jsonResponse);
             default -> response.sendError(HttpServletResponse.SC_NOT_FOUND, "Invalid endpoint");
         }
     } catch (Exception e) {
@@ -75,7 +85,16 @@ private void handleAddToCart(HttpServletRequest request, HttpServletResponse res
         String productIdStr = request.getParameter("productId");
         String quantityStr = request.getParameter("quantity");
 
-        System.out.println(">>> [DEBUG] Request parameters: " + request.getParameterMap());
+        // Debug thông tin chi tiết
+        System.out.println(">>> [DEBUG] Request URL: " + request.getRequestURL());
+        System.out.println(">>> [DEBUG] Content Type: " + request.getContentType());
+        System.out.println(">>> [DEBUG] Character Encoding: " + request.getCharacterEncoding());
+
+        System.out.println(">>> [DEBUG] All Parameters:");
+        request.getParameterMap().forEach((key, value) -> {
+            System.out.println(">>> [DEBUG] " + key + " = " + String.join(", ", value));
+        });
+
         System.out.println(">>> [DEBUG] productIdStr = " + productIdStr + ", quantityStr = " + quantityStr);
 
         if (productIdStr == null || productIdStr.isBlank() || quantityStr == null || quantityStr.isBlank()) {

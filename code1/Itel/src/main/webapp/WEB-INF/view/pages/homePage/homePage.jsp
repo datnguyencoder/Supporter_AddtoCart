@@ -562,13 +562,19 @@
                         const originalText = this.textContent;
                         this.textContent = 'Đang thêm...';
 
+                        // Tạo URL parameters với encodeURIComponent
+                        const params = new URLSearchParams();
+                        params.append('productId', productId);
+                        params.append('quantity', quantity);
+                        console.log("Request params:", params.toString());
+
                         fetch('/Itel/cart/add', {
                             method: 'POST',
                             headers: { 
                                 'Content-Type': 'application/x-www-form-urlencoded',
                                 'X-Requested-With': 'XMLHttpRequest'
                             },
-                            body: `productId=${productId}&quantity=${quantity}`
+                            body: params.toString()
                         })
                         .then(response => {
                             if (!response.ok) {
