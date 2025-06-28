@@ -510,7 +510,7 @@
                                             </p>
                                             <div class="d-flex justify-content-center gap-2">
                                                 <a href="<%= ProjectPaths.HREF_TO_PRODUCTPAGE%>&id=${product.productId}" class="btn btn-buy text-white">Xem chi tiết</a>
-                                                <button class="btn btn-cart text-white add-to-cart" data-product-id="<c:out value='${product.productId}'/>">Thêm vào giỏ</button>
+                                                <button class="btn btn-cart text-white add-to-cart" data-product-id="${product.productId}">Thêm vào giỏ</button>
                                             </div>
                                         </div>
                                     </div>
@@ -541,93 +541,101 @@
             });
         </script>
 
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Handler cho nút "Thêm vào giỏ"
+                document.querySelectorAll('.add-to-cart').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const productId = this.getAttribute('data-product-id');
+                        console.log("Adding product ID: " + productId);
+                        
+                        if (!productId) {
+                            console.error("Product ID is missing!");
+                            showNotification('Lỗi: Không tìm thấy mã sản phẩm', 'error');
+                            return;
+                        }
+                        
+                        const quantity = 1; // Mặc định thêm 1 sản phẩm
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Handler cho nút "Thêm vào giỏ"
-        document.querySelectorAll('.add-to-cart').forEach(button => {
-            button.addEventListener('click', function() {
-                const productId = this.dataset.productId;
-                const quantity = 1; // Mặc định thêm 1 sản phẩm
+                        // Disable button để tránh click nhiều lần
+                        this.disabled = true;
+                        const originalText = this.textContent;
+                        this.textContent = 'Đang thêm...';
 
-                // Disable button để tránh click nhiều lần
-                this.disabled = true;
-                const originalText = this.textContent;
-                this.textContent = 'Đang thêm...';
+                        fetch('/Itel/cart/add', {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: `productId=${productId}&quantity=${quantity}`
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                // Hiển thị thông báo thành công
+                                showNotification('Đã thêm sản phẩm vào giỏ hàng!', 'success');
 
-                fetch('/Itel/cart/add', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: `productId=${productId}&quantity=${quantity}`
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        // Hiển thị thông báo thành công
-                        showNotification('Đã thêm sản phẩm vào giỏ hàng!', 'success');
-
-                        // Có thể cập nhật số lượng giỏ hàng ở header nếu có
-                        updateCartCount();
-                    } else {
-                        showNotification('Lỗi: ' + data.message, 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error adding to cart:', error);
-                    showNotification('Có lỗi xảy ra khi thêm vào giỏ hàng. Vui lòng thử lại!', 'error');
-                })
-                .finally(() => {
-                    // Enable lại button
-                    this.disabled = false;
-                    this.textContent = originalText;
+                                // Có thể cập nhật số lượng giỏ hàng ở header nếu có
+                                updateCartCount();
+                            } else {
+                                showNotification('Lỗi: ' + data.message, 'error');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error adding to cart:', error);
+                            showNotification('Có lỗi xảy ra khi thêm vào giỏ hàng. Vui lòng thử lại!', 'error');
+                        })
+                        .finally(() => {
+                            // Enable lại button
+                            this.disabled = false;
+                            this.textContent = originalText;
+                        });
+                    });
                 });
             });
-        });
-    });
 
-    function showNotification(message, type) {
-        if (type === undefined) {
-            type = 'info';
-        }
-    
-        const toast = document.createElement('div');
-        toast.className = 'alert alert-' + (type === 'success' ? 'success' : 'danger') + ' alert-dismissible fade show position-fixed';
-        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-        toast.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-
-        document.body.appendChild(toast);
-
-        setTimeout(function() {
-            if (toast.parentNode) {
-                toast.remove();
-            }
-        }, 3000);
-    
-    function updateCartCount() {
-        const cartCountElement = document.querySelector('.cart-count');
-        if (cartCountElement) {
-            fetch('/Itel/cart/count', {
-                method: 'GET',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    cartCountElement.textContent = data.count;
+            function showNotification(message, type) {
+                if (type === undefined) {
+                    type = 'info';
                 }
-            })
-            .catch(error => console.error('Error updating cart count:', error));
+            
+                const toast = document.createElement('div');
+                toast.className = 'alert alert-' + (type === 'success' ? 'success' : 'danger') + ' alert-dismissible fade show position-fixed';
+                toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+                toast.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+
+                document.body.appendChild(toast);
+
+                setTimeout(function() {
+                    if (toast.parentNode) {
+                        toast.remove();
+                    }
+                }, 3000);
             }
-        }
-    </script>
+            
+            function updateCartCount() {
+                const cartCountElement = document.querySelector('.cart-count');
+                if (cartCountElement) {
+                    fetch('/Itel/cart/count', {
+                        method: 'GET',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            cartCountElement.textContent = data.count;
+                        }
+                    })
+                    .catch(error => console.error('Error updating cart count:', error));
+                }
+            }
+        </script>
         <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
         <script>
             AOS.init();
@@ -706,37 +714,6 @@
                 megaMenu.addEventListener('mouseleave', () => {
                     isMouseOverMegaMenu = false;
                     tryHideMegaMenu();
-                });
-            });
-        </script>
-
-        <!-- Add to Cart -->
-        <script>
-            document.querySelectorAll('.add-to-cart').forEach(button => {
-                button.addEventListener('click', function () {
-                    const productId = this.getAttribute('data-product-id');
-                    
-                    // Hiển thị thông báo đang xử lý
-                    alert('Đang thêm sản phẩm vào giỏ hàng...');
-                    
-                    fetch('/Itel/cart/add', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: `productId=${productId}&quantity=1`
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('Đã thêm sản phẩm vào giỏ hàng thành công!');
-                            window.location.href = '<%= ProjectPaths.HREF_TO_CARTPAGE %>';
-                        } else {
-                            alert(data.message || 'Không thể thêm sản phẩm vào giỏ hàng');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Lỗi:', error);
-                        alert('Đã xảy ra lỗi khi thêm vào giỏ hàng, vui lòng thử lại sau');
-                    });
                 });
             });
         </script>

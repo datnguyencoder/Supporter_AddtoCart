@@ -25,10 +25,10 @@ public class ProjectPaths {
     public static final String HREF_TO_HOMEPAGE = HREF_TO_MAINCONTROLLER + "homePage";
 
     // Direct endpoints (via CartServlet, MomoServlet, VNPayServlet)
-    public static final String HREF_TO_CARTPAGE = "/cart";
-    public static final String HREF_TO_ORDERPAGE = "/orders";
-    public static final String HREF_TO_MOMO_PAYMENT = "/payment/momo";
-    public static final String HREF_TO_VNPAY_PAYMENT = "/payment/vnpay";
+    public static final String HREF_TO_CARTPAGE = PREFIX_WEB_PATH + "/cart";
+    public static final String HREF_TO_ORDERPAGE = PREFIX_WEB_PATH + "/orders";
+    public static final String HREF_TO_MOMO_PAYMENT = PREFIX_WEB_PATH + "/payment/momo";
+    public static final String HREF_TO_VNPAY_PAYMENT = PREFIX_WEB_PATH + "/payment/vnpay";
 
     // JSP paths for view rendering
     public static final String JSP_PATH_VIEW = "/WEB-INF/view/pages/";

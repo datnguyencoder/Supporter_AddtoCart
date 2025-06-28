@@ -75,6 +75,7 @@ private void handleAddToCart(HttpServletRequest request, HttpServletResponse res
         String productIdStr = request.getParameter("productId");
         String quantityStr = request.getParameter("quantity");
 
+        System.out.println(">>> [DEBUG] Request parameters: " + request.getParameterMap());
         System.out.println(">>> [DEBUG] productIdStr = " + productIdStr + ", quantityStr = " + quantityStr);
 
         if (productIdStr == null || productIdStr.isBlank() || quantityStr == null || quantityStr.isBlank()) {
@@ -87,76 +88,86 @@ private void handleAddToCart(HttpServletRequest request, HttpServletResponse res
             return;
         }
 
-        int productId = Integer.parseInt(productIdStr);
-        int quantity = Integer.parseInt(quantityStr);
-        Integer userId = (Integer) request.getSession().getAttribute("userId");
+        try {
+            int productId = Integer.parseInt(productIdStr);
+            int quantity = Integer.parseInt(quantityStr);
+            Integer userId = (Integer) request.getSession().getAttribute("userId");
 
-        System.out.println(">>> [DEBUG] userId = " + userId);
+            System.out.println(">>> [DEBUG] userId = " + userId);
 
-        if (userId == null) {
+            if (userId == null) {
+                jsonResponse.put("success", false);
+                jsonResponse.put("message", "Vui lòng đăng nhập trước khi thêm sản phẩm vào giỏ hàng");
+                try (PrintWriter out = response.getWriter()) {
+                    out.print(jsonResponse.toString());
+                    out.flush();
+                }
+                return;
+            }
+
+            Product product = getProductById(productId);
+            System.out.println(">>> [DEBUG] product = " + product);
+
+            if (product == null || !product.getStatus().equals(Status.ACTIVE)) {
+                jsonResponse.put("success", false);
+                jsonResponse.put("message", "Sản phẩm không tồn tại hoặc đã bị khóa");
+                try (PrintWriter out = response.getWriter()) {
+                    out.print(jsonResponse.toString());
+                    out.flush();
+                }
+                return;
+            }
+
+            if (product.getStockQuantity() < quantity) {
+                jsonResponse.put("success", false);
+                jsonResponse.put("message", "Sản phẩm không đủ hàng tồn kho");
+                try (PrintWriter out = response.getWriter()) {
+                    out.print(jsonResponse.toString());
+                    out.flush();
+                }
+                return;
+            }
+
+            Orders cartOrder = getCartOrder(userId);
+            if (cartOrder == null) {
+                cartOrder = new Orders();
+                cartOrder.setUserId(userId);
+                cartOrder.setOrderDate(LocalDateTime.now());
+                cartOrder.setStatus(Status.PENDING);
+                cartOrder.setTotalAmount(BigDecimal.ZERO);
+                int orderId = createOrder(cartOrder);
+                cartOrder.setOrderId(orderId);
+            }
+
+            OrderDetail existingDetail = getOrderDetail(cartOrder.getOrderId(), productId);
+            if (existingDetail != null) {
+                existingDetail.setQuantity(existingDetail.getQuantity() + quantity);
+                updateOrderDetail(existingDetail);
+            } else {
+                OrderDetail orderDetail = new OrderDetail();
+                orderDetail.setOrder(cartOrder);
+                orderDetail.setProduct(product);
+                orderDetail.setQuantity(quantity);
+                orderDetail.setUnitPrice(product.getPrice());
+                addOrderDetail(orderDetail);
+            }
+
+            updateOrderTotal(cartOrder.getOrderId());
+
+            jsonResponse.put("success", true);
+            jsonResponse.put("message", "Đã thêm sản phẩm vào giỏ hàng");
+            try (PrintWriter out = response.getWriter()) {
+                out.print(jsonResponse.toString());
+                out.flush();
+            }
+        } catch (NumberFormatException e) {
             jsonResponse.put("success", false);
-            jsonResponse.put("message", "Vui lòng đăng nhập trước khi thêm sản phẩm vào giỏ hàng");
+            jsonResponse.put("message", "Định dạng productId hoặc quantity không hợp lệ");
             try (PrintWriter out = response.getWriter()) {
                 out.print(jsonResponse.toString());
                 out.flush();
             }
             return;
-        }
-
-        Product product = getProductById(productId);
-        System.out.println(">>> [DEBUG] product = " + product);
-
-        if (product == null || !product.getStatus().equals(Status.ACTIVE)) {
-            jsonResponse.put("success", false);
-            jsonResponse.put("message", "Sản phẩm không tồn tại hoặc đã bị khóa");
-            try (PrintWriter out = response.getWriter()) {
-                out.print(jsonResponse.toString());
-                out.flush();
-            }
-            return;
-        }
-
-        if (product.getStockQuantity() < quantity) {
-            jsonResponse.put("success", false);
-            jsonResponse.put("message", "Sản phẩm không đủ hàng tồn kho");
-            try (PrintWriter out = response.getWriter()) {
-                out.print(jsonResponse.toString());
-                out.flush();
-            }
-            return;
-        }
-
-        Orders cartOrder = getCartOrder(userId);
-        if (cartOrder == null) {
-            cartOrder = new Orders();
-            cartOrder.setUserId(userId);
-            cartOrder.setOrderDate(LocalDateTime.now());
-            cartOrder.setStatus(Status.PENDING);
-            cartOrder.setTotalAmount(BigDecimal.ZERO);
-            int orderId = createOrder(cartOrder);
-            cartOrder.setOrderId(orderId);
-        }
-
-        OrderDetail existingDetail = getOrderDetail(cartOrder.getOrderId(), productId);
-        if (existingDetail != null) {
-            existingDetail.setQuantity(existingDetail.getQuantity() + quantity);
-            updateOrderDetail(existingDetail);
-        } else {
-            OrderDetail orderDetail = new OrderDetail();
-            orderDetail.setOrder(cartOrder);
-            orderDetail.setProduct(product);
-            orderDetail.setQuantity(quantity);
-            orderDetail.setUnitPrice(product.getPrice());
-            addOrderDetail(orderDetail);
-        }
-
-        updateOrderTotal(cartOrder.getOrderId());
-
-        jsonResponse.put("success", true);
-        jsonResponse.put("message", "Đã thêm sản phẩm vào giỏ hàng");
-        try (PrintWriter out = response.getWriter()) {
-            out.print(jsonResponse.toString());
-            out.flush();
         }
     }
 
